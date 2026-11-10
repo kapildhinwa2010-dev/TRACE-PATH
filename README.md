@@ -1,13 +1,13 @@
 # TRACE-PATH
 
-Find the exact block where a piece of information enters the stream.
+Find which block of a model carries a piece of information, with activation patching.
 
-TRACE-PATH is an activation-patching tracer for stream-additive models. It runs a clean input and a corrupted input, then continues the model from the clean intermediate state at every depth. The recovery curve shows at which depth the missing information is restored, and the birth index reports where the fact first becomes sufficient.
+TRACE-PATH runs a clean input and a corrupted input through any list of stream-additive blocks, then transplants the write of each block from the clean run into the corrupted run, one block at a time. The recovery curve shows exactly where the missing information flows, and the birth index reports the first block whose transplant restores the clean behavior.
 
 ## What it does
 
 - Runs clean and corrupted passes through any list of stream-additive blocks.
-- Patches the clean state back in at every depth.
+- Transplants each block write from the clean run into the corrupted run.
 - Returns a normalized recovery curve, clean and corrupt scores, and the birth index.
 
 ## Install
@@ -35,10 +35,10 @@ print(result["birth_index"])
 ## How it works
 
 1. Score the clean run and the corrupted run.
-2. For every depth k, continue the model from the clean state after k blocks.
+2. For every block k, replace its write in the corrupted run with the write it produced in the clean run.
 3. Normalize each score between the corrupt baseline (0) and the clean baseline (1).
 
-The first depth that reaches the threshold is the birth index: the information is present in the clean stream from that point onward.
+A block whose transplant restores the answer sits on the information path; a block whose transplant changes nothing does not carry the missing information.
 
 ## Honest scope
 

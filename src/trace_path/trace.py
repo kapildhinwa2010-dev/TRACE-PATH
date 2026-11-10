@@ -1,9 +1,10 @@
 """Activation-patching tracer: localize which block carries a fact.
 
-Given a clean input and a corrupted input, TRACE-PATH swaps the
-clean intermediate state back in at every depth and measures how
-much of the clean behavior recovers. The recovery curve shows at
-which depth the information enters the stream.
+Given a clean input and a corrupted input, TRACE-PATH transplants the
+write of one block from the clean run into the corrupted run, for
+every block, and measures how much clean behavior recovers. If
+transplanting block k recovers the answer, the information flows
+through block k.
 
 Blocks are stream-additive callables: state = state + block(state).
 Pure NumPy.
@@ -21,37 +22,51 @@ def run_stream(blocks, x, start=0, stop=None):
     return x
 
 
-def trace_blocks(blocks, x_clean, x_corrupt, score_fn, threshold=0.5):
-    """Patch the clean stream in at every depth and measure recovery.
+def _states(blocks, x):
+    """Return the stream entering every block, plus the final state."""
+    states = [np.asarray(x, dtype=float)]
+    current = states[0]
+    for b in blocks:
+        current = current + b(current)
+        states.append(current)
+    return states
 
-    ``score_fn`` maps a final state to a scalar. The recovery value
-    is normalized so that the corrupt run is 0 and the clean run is 1.
-    ``birth_index`` is the smallest depth at which recovery reaches
-    ``threshold``. curve[0] is the corrupt baseline and curve[len(blocks)]
-    is the clean baseline.
+
+def trace_blocks(blocks, x_clean, x_corrupt, score_fn, threshold=0.5):
+    """Transplant every block write from the clean run into the corrupt run.
+
+    ``score_fn`` maps a final state to a scalar. Recovery values are
+    normalized so that the corrupt baseline is 0 and the clean baseline
+    is 1. ``recovery_curve[k]`` is the recovery when the write of block
+    k is replaced by its clean-run counterpart. ``birth_index`` is the
+    first block whose transplant reaches ``threshold``.
     """
     if not blocks:
         raise ValueError("blocks must be a non-empty list")
     n = len(blocks)
+    x_clean = np.asarray(x_clean, dtype=float)
+    x_corrupt = np.asarray(x_corrupt, dtype=float)
+
     clean_out = run_stream(blocks, x_clean)
     corrupt_out = run_stream(blocks, x_corrupt)
     s_clean = float(score_fn(clean_out))
     s_corrupt = float(score_fn(corrupt_out))
     denom = s_clean - s_corrupt
 
-    states = [np.asarray(x_clean, dtype=float)]
-    x = states[0]
-    for b in blocks:
-        x = x + b(x)
-        states.append(x)
+    clean_states = _states(blocks, x_clean)
 
     curve = []
-    for k in range(n + 1):
+    for k in range(n):
+        clean_write = blocks[k](clean_states[k])
+        state = x_corrupt
+        for i, b in enumerate(blocks):
+            write = clean_write if i == k else b(state)
+            state = state + write
+        s1 = float(score_fn(state))
         if abs(denom) < 1e-12:
             curve.append(0.0)
         else:
-            out_k = run_stream(blocks, states[k], start=k)
-            curve.append((float(score_fn(out_k)) - s_corrupt) / denom)
+            curve.append((s1 - s_corrupt) / denom)
 
     birth = None
     for k, value in enumerate(curve):
