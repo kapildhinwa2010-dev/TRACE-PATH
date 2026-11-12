@@ -1,5 +1,7 @@
 # TRACE-PATH
 
+[![Stars](https://img.shields.io/github/stars/kapildhinwa2010-dev/TRACE-PATH?style=flat-square)](https://github.com/kapildhinwa2010-dev/TRACE-PATH/stargazers) [![Forks](https://img.shields.io/github/forks/kapildhinwa2010-dev/TRACE-PATH?style=flat-square)](https://github.com/kapildhinwa2010-dev/TRACE-PATH/network/members) [![Issues](https://img.shields.io/github/issues/kapildhinwa2010-dev/TRACE-PATH?style=flat-square)](https://github.com/kapildhinwa2010-dev/TRACE-PATH/issues) [![Top language](https://img.shields.io/github/languages/top/kapildhinwa2010-dev/TRACE-PATH?style=flat-square)](https://github.com/kapildhinwa2010-dev/TRACE-PATH)
+
 Find which block of a model carries a piece of information, with activation patching.
 
 TRACE-PATH runs a clean input and a corrupted input through any list of stream-additive blocks, then transplants the write of each block from the clean run into the corrupted run, one block at a time. The recovery curve shows exactly where the missing information flows, and the birth index reports the first block whose transplant restores the clean behavior.
